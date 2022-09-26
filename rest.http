@@ -1,0 +1,40 @@
+
+### create 
+POST http://192.168.2.13:5000/v1/user/create
+Content-Type: application/json
+
+{
+    "firstName":"Thuy",
+    "lastName":"Diem",
+    "email":"td2@gmail.com",
+    "password":"V123456@"
+}
+
+#### sign-in
+POST http://192.168.2.13:5000/v1/user/sign-in
+Content-Type: application/json
+
+{
+    "email":"td@gmail.com",
+    "password":"V123456@"
+}
+
+### sign-out
+POST http://192.168.2.13:5000/v1/user/sign-out
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiI2MzIzMTU4NGViMWE1YzQ4YWFmZWI3YzYiLCJpYXQiOjE2NjM5MDQyNDcsImV4cCI6MTY2MzkwNDMwN30.s9EtKwq007ckH18EaeXR9yrzmJUy2KOJN5f3q62JCWE
+
+#### get user profile
+GET http://192.168.2.13:5000/v1/user/profile
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiI2MzIzMTU4NGViMWE1YzQ4YWFmZWI3YzYiLCJpYXQiOjE2NjM4NDcyNzMsImV4cCI6MTY2Mzg0NzMzM30.0I-Z4YS2QHxX_vCjsy0UPMjHuQK8G0UDWMQlrwt3TU0
+### get new access token
+POST http://192.168.2.13:5000/v1/user/refresh-token
+Content-Type: application/json
+
+{
+    "refreshToken": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiI2MzIzMTU4NGViMWE1YzQ4YWFmZWI3YzYiLCJpYXQiOjE2NjM3NTM1NzYsImV4cCI6MTY5NTMxMTE3Nn0.b_I4W2CAMz0TAGNE3mi5pGKEMIy9YGIXzAIkdLcIOFM"
+}
+
+#### get user lists.
+GET http://192.168.2.13:5000/v1/user/get-lists
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiI2MzIyZGY5ZTU4M2NhMjgxNDc0Yjc1ZTUiLCJpYXQiOjE2NjMyMzA5OTUsImV4cCI6MTY2MzIzMTA1NX0.ZlZ1zqWAJUxMacRTYcCktSuLrE66YOHY-03mhla5SzE
+
