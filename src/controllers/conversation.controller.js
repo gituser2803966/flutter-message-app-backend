@@ -8,8 +8,17 @@ const createAndResponseConversation = async (conversation) => {
   return conversationDoc;
 };
 
-const isConversationAlready = async () => {
-  return true;
+const isConversationExist = async (conversationId) => {
+  console.log(`conversationId ${conversationId}`);
+  const existConversation = await ConversationModel.findOne({
+    localId: `${conversationId}`,
+  });
+
+  console.log(`::::::::::: existConversation ${existConversation}`);
+
+  if (existConversation) return existConversation;
+
+  return null;
 };
 
 // @desc     get conversation list for userId
@@ -35,6 +44,7 @@ const getConversationList = async (req, res) => {
 
       const conversationObject = {
         _id: conversation[0]._id,
+        localId: conversation[0].localId,
         participants: participant.users,
         title:
           conversation[0].title !== "" ? conversation[0].title : "No title",
@@ -74,17 +84,8 @@ const getConversationList = async (req, res) => {
   }
 };
 
-// @desc     get conversation list for userId
-// @route   /v1/conversation/get-lists
-// @access   private
-const getTitleForPrivateConversation = async (req, res) => {
-  try {
-    const { participants } = req.params;
-  } catch (err) {}
-};
-
 module.exports = {
   createAndResponseConversation,
   getConversationList,
-  isConversationAlready,
+  isConversationExist,
 };

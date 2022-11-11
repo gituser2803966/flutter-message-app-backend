@@ -2,6 +2,10 @@ const { Schema, model } = require("mongoose");
 
 const conversationSchema = new Schema(
   {
+    localId: {
+      type: String,
+      required: true,
+    },
     title: {
       type: String,
       default: "",

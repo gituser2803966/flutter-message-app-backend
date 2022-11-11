@@ -15,7 +15,13 @@ class SocketService {
     //********** group chat **********
     socket.on(
       "create-conversation",
-      async ({ title, creator, channelId, participants }) => {
+      async ({
+        title,
+        creator,
+        channelId,
+        participants,
+        localConversationId,
+      }) => {
         console.log(`:::: client tao cuoc tro chuyen moi `);
         console.log(`:::: title ${title} `);
         console.log(`:::: creator ${creator} `);
@@ -29,6 +35,7 @@ class SocketService {
 
         const conversation =
           await conversationController.createAndResponseConversation({
+            localId: localConversationId,
             title: title,
             creator: creator,
             channelId: channelId,
@@ -44,6 +51,7 @@ class SocketService {
         //conversation schema for client format.
         const conversationClientFormat = {
           _id: conversation._id,
+          localId: conversation.localId,
           participants: participant.users,
           title: title,
           channelId: channelId,
@@ -66,20 +74,27 @@ class SocketService {
     ///add events here......
     socket.on(
       "send-message",
-      async ({ senderId, recipients, channelId, text }) => {
+      async ({
+        senderId,
+        recipients,
+        channelId,
+        text,
+        localConversationId,
+      }) => {
         console.log("::::::::: client send text message:", text);
         console.log("::::::::: senderId:", senderId);
         console.log("::::::::: recipients:", recipients);
 
         let isExistConversation =
-          await participantController.findConversationForParticipant(
-            recipients
+          await conversationController.isConversationExist(
+            localConversationId.toString()
           );
         if (isExistConversation == null) {
           console.log(":::::::::::::create new conversation.........");
 
           const conversation =
             await conversationController.createAndResponseConversation({
+              localId: localConversationId,
               title: "",
               creator: senderId,
               channelId: channelId,
@@ -127,6 +142,7 @@ class SocketService {
           //conversation schema for client format.
           const conversationClientFormat = {
             _id: conversation._id,
+            localId: conversation.localId,
             participants: participant.users,
             title: "No title",
             channelId: channelId,
