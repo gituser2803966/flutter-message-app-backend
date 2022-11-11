@@ -1,7 +1,7 @@
 const jwt = require("jsonwebtoken");
 // const client = require("./redis_connection");
 
-const { TTL_ACCESS_TOKEN, TTL_REFRESH_TOKEN } = require("../helpers/constant");
+const { TTL_ACCESS_TOKEN, TTL_REFRESH_TOKEN } = require("../utils/constant");
 // //Time to expired of access token = 1 day
 // const TTL_ACCESS_TOKEN = 60;
 // //Time to expired of refresh token = 1 year

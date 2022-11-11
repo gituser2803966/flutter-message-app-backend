@@ -4,7 +4,6 @@ const createError = require("http-errors");
 const isAuth = async (req, res, next) => {
   try {
     if (!req.headers["authorization"]) {
-      console.log("unauthorized");
       return res.status(403).json({
         error: "unauthorized",
         message: "unauthorized access!",
@@ -34,7 +33,7 @@ const isAuth = async (req, res, next) => {
     }
     return res.status(500).json({
       error: err,
-      message: "get user profile failed! .",
+      message: "server error .",
     });
   }
 };

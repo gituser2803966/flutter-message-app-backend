@@ -10,8 +10,10 @@ const userSchema = new Schema(
       type: String,
       required: true,
     },
+    name_tags: { type: [String], index: true },
     email: {
       type: String,
+      index: true,
       required: true,
       unique: true,
     },

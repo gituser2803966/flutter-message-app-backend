@@ -2,12 +2,11 @@ const {
   getAccessToken,
   getRefreshToken,
   verifyRefreshToken,
-} = require("../helpers/jwtService");
+} = require("../services/jwt.service");
 const User = require("../models/user.model");
 const bcrypt = require("bcrypt");
-// const client = require("../helpers/redis_connection");
-var createError = require("http-errors");
-const { TTL_ACCESS_TOKEN } = require("../helpers/constant");
+let createError = require("http-errors");
+const { TTL_ACCESS_TOKEN } = require("../utils/constant");
 
 // @desc     register User
 // @route    v1/user/create
@@ -29,14 +28,30 @@ const createUser = async (req, res) => {
     const salt = await bcrypt.genSalt(10);
     const passwordHash = await bcrypt.hash(password, salt);
 
+    const fullName = firstName + "" + lastName;
+
+    let name_tags = fullName.split("").map(function (item) {
+      return item.trim();
+    });
+
     const newUser = new User({
       firstName,
       lastName,
+      name_tags,
       email,
       password: passwordHash,
     });
 
     const user = await newUser.save();
+
+    //add contact as clone of user
+    // const contact = {
+    //   userId: user._id,
+    //   firstName: firstName,
+    //   lastName: lastName,
+    //   email: email,
+    // };
+    // await contactController.addContact(contact);
 
     const accessToken = await getAccessToken(user._id);
     const refreshToken = await getRefreshToken(user._id);
@@ -68,21 +83,6 @@ const createUser = async (req, res) => {
       createdAt: user.createdAt,
       updatedAt: user.updatedAt,
     };
-
-    // client.set(
-    //   user._id.toString(),
-    //   refreshToken,
-    //   // time to left: 1 year
-    //   {
-    //     EX: 365 * 24 * 60 * 60,
-    //   },
-    //   (err, reply) => {
-    //     if (err) {
-    //       // return reject(createError.InternalServerError());
-    //       throw new createError.InternalServerError();
-    //     }
-    //   }
-    // );
 
     return res.status(200).json({
       user: userRes,
@@ -258,8 +258,6 @@ const refreshToken = async (req, res) => {
   try {
     const { refreshToken } = req.body;
 
-    console.log(`refreshToken:::::::: ${refreshToken}`);
-
     if (!refreshToken) {
       throw new createError.BadRequest();
     }
@@ -333,13 +331,57 @@ const getAllUser = (req, res) => {
   });
 };
 
+// @desc     search user
+// @route    v1/user/search
+// @access   private
+
+const search = async (req, res) => {
+  try {
+    const { key } = req.query;
+    if (!key) {
+      return res.status(200).json({
+        elements: [],
+        message: `0 users found.`,
+        count: 0,
+      });
+    }
+
+    const searchResult = await User.aggregate([
+      {
+        $search: {
+          index: "name_tags",
+          text: {
+            query: `${key}`,
+            path: {
+              wildcard: "*",
+            },
+          },
+        },
+      },
+    ]);
+
+    const elements = searchResult.length;
+
+    return res.status(200).json({
+      elements: searchResult,
+      message: `${elements} users found.`,
+      count: `${elements}`,
+    });
+  } catch (e) {
+    return res.status(500).json({
+      message: "server error",
+      error: e,
+    });
+  }
+};
+
 // @desc     get all User
 // @route    v1/user/profile
 // @access   private
 const getUserProfile = async (req, res) => {
   try {
     const { userId } = req.payload;
-    const user = await User.findById(userId);
+    const user = await User.findById(userId).exec();
 
     const accessToken = req.headers.authorization;
 
@@ -381,11 +423,57 @@ const getUserProfile = async (req, res) => {
   }
 };
 
+// @desc     get user detail
+// @route    v1/user/:id
+// @access   private
+const getUserById = async (req, res) => {
+  try {
+    const userId = req.params.id;
+    console.log(`::::::::::::req.params.id `, req.params.id);
+    const user = await User.findById(userId).exec();
+
+    const userFormatForClient = {
+      _id: user._id,
+      firstName: user.firstName,
+      lastName: user.lastName,
+      email: user.email,
+      password: user.password,
+      isActive: user.isActive,
+      isReported: user.isReported,
+      isBlocked: user.isBlocked,
+    };
+
+    return res.status(200).json({
+      user: userFormatForClient,
+      message: "get user by id OK! .",
+    });
+  } catch (err) {
+    if (err.name === "JsonWebTokenError") {
+      return res.status(500).json({
+        error: err.message,
+        message: "JsonWebTokenError!",
+      });
+    }
+    if (err.name === "TokenExpiredError") {
+      return res.status(500).json({
+        error: err.message,
+        message: "jwt expired!",
+      });
+    }
+    return res.status(500).json({
+      error: err,
+      message: "get user by id failed! .",
+    });
+  }
+};
+
 module.exports = {
   getAllUser,
   getUserProfile,
+  search,
   userSignIn,
   createUser,
   refreshToken,
   signOut,
+  getUserById,
 };
