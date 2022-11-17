@@ -10,30 +10,45 @@ const UserContactModel = require("../models/user_contact.model");
  * @returns [0-> contactForSender,1->contactForRecipient]
  */
 
-const addContactForSenderAndRecipient = async (senderId, recipientId) => {
+const addContactForSender = async (senderId, recipientId) => {
   try {
     const recipient = await UserModel.findOne({ _id: recipientId });
-    //add recipient to contact of sender.
-    const r_contact_info = {
+    //for contact doc.
+    const newRecipientContactDoc = new ContactModel({
       user: recipient._id,
       firstName: recipient.firstName,
       lastName: recipient.lastName,
       email: recipient.email,
-    };
-    //for contact doc.
-    const newRecipientContactDoc = new ContactModel(r_contact_info);
+    });
     const r_contact_doc = await newRecipientContactDoc.save();
-
-    const recipientContact = {
+    //for user contact doc.
+    const recipientUserContactModel = new UserContactModel({
       user: senderId,
       contact: r_contact_doc._id,
-    };
-    //for user contact doc.
-    const recipientUserContactModel = new UserContactModel(recipientContact);
+    });
     const contactOfRecipient = await recipientUserContactModel.save();
-    /* **************************
-     ************************************
-     ********************************************/
+    console.log(`:::contactOfRecipient ${contactOfRecipient}`);
+
+    //
+    const contactOfSenderForClientFormat = {
+      _id: contactOfRecipient._id,
+      user: contactOfRecipient.user,
+      contact: r_contact_doc,
+      createdAt: contactOfRecipient.createdAt,
+      updatedAt: contactOfRecipient.updatedAt,
+    };
+
+    return contactOfSenderForClientFormat;
+
+    ////add a contact for recipient
+  } catch (err) {
+    console.log(err);
+    throw err;
+  }
+};
+
+const addContactForRecipient = async (senderId, recipientId) => {
+  try {
     //add sender to contact of recipient
     const s_contact = await UserModel.findOne({ _id: senderId });
     //add recipient to contact of sender.
@@ -47,39 +62,26 @@ const addContactForSenderAndRecipient = async (senderId, recipientId) => {
     const newSenderContactInfoModel = new ContactModel(s_contact_info);
     const s_contact_doc = await newSenderContactInfoModel.save();
 
-    //for user contact doc.
-    const senderUserContactIfo = {
+    const senderUserContactModel = new UserContactModel({
       user: recipientId,
-      contact: newSenderContactInfoModel._id,
-    };
-    const senderUserContactModel = new UserContactModel(senderUserContactIfo);
+      contact: s_contact_doc._id,
+    });
     const contactOfSender = await senderUserContactModel.save();
+    console.log(`:::contactOfSender ${contactOfSender}`);
 
     //
-    const userContactForSender = {
-      _id: contactOfSender._id,
-      user: recipientId,
+    const contactOfRecipientForClientFormat = {
+      _id: senderUserContactModel._id,
+      user: senderUserContactModel.user,
       contact: s_contact_doc,
-      createdAt: contactOfSender.createdAt,
-      updatedAt: contactOfSender.updatedAt,
+      createdAt: senderUserContactModel.createdAt,
+      updatedAt: senderUserContactModel.updatedAt,
     };
 
-    //
-    const userContactForRecipient = {
-      _id: contactOfRecipient._id,
-      user: senderId,
-      contact: r_contact_doc,
-      createdAt: contactOfRecipient.createdAt,
-      updatedAt: contactOfRecipient.updatedAt,
-    };
-
-    return [userContactForSender, userContactForRecipient];
-
-    ////add a contact for recipient
+    return contactOfRecipientForClientFormat;
   } catch (err) {
-    console.log(err);
-    throw err;
+    console.log(`error: ${err}`);
   }
 };
 
-module.exports = { addContactForSenderAndRecipient };
+module.exports = { addContactForSender, addContactForRecipient };

@@ -104,7 +104,7 @@ class SocketService {
           const recipient = recipients.filter((r) => r !== senderId);
           //update conversation for new message above.
           // newMessage.conversation = conversation._id;
-          const [participant, message, contactForSenderAndRecipient] =
+          const [participant, message, contactForSender, contactForRecipient] =
             await Promise.all([
               participantController.createAndResponseParticipant({
                 conversation: conversation._id,
@@ -117,26 +117,16 @@ class SocketService {
                 messageText: text,
                 deletedAt: new Date("1900-01-10T00:00:00Z"),
               }),
-              contactControler.addContactForSenderAndRecipient(
-                senderId,
-                recipient
-              ),
+              contactControler.addContactForSender(senderId, recipient),
+              contactControler.addContactForRecipient(senderId, recipient),
             ]);
 
-          //send contact for sender.
-          const contactForSender = contactForSenderAndRecipient.filter(
-            (c) => c.user == senderId
-          );
           _io.to(senderId).emit("create-contact", {
-            contact: contactForSender[0],
+            contact: contactForSender,
           });
 
-          // send contact for reccipient.
-          const contactForRecipient = contactForSenderAndRecipient.filter(
-            (c) => c.user == recipient
-          );
           _io.to(recipient).emit("create-contact", {
-            contact: contactForRecipient[0],
+            contact: contactForRecipient,
           });
 
           //conversation schema for client format.
