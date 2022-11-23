@@ -24,6 +24,7 @@ Content-Type: application/json
 GET {{urlDev}}/user/6347eeb10a8bdda26415ee66
 Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiI2MzQ3ZWViMTBhOGJkZGEyNjQxNWVlNjYiLCJpYXQiOjE2NjcyOTk2OTAsImV4cCI6MTY2NzMwOTc3MH0.QmX3s0RDfo9YglOWpqobCEeDgW5jsjjBtxeeE62LFsU
 
+
 #### search
 GET {{urlDev}}/user/search?key=a
 Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiI2MzQ3ZWViMTBhOGJkZGEyNjQxNWVlNjYiLCJpYXQiOjE2NjY3NjQ1MTIsImV4cCI6MTY2Njc3NDU5Mn0.1SfVJgFwfgZbVtknqQcQ8KMCVegThynvCaFVA2pf6_c
@@ -32,9 +33,14 @@ Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiI2MzQ3Z
 POST {{urlDev}}/user/sign-out
 Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiI2MzIzMTU4NGViMWE1YzQ4YWFmZWI3YzYiLCJpYXQiOjE2NjM5MDQyNDcsImV4cCI6MTY2MzkwNDMwN30.s9EtKwq007ckH18EaeXR9yrzmJUy2KOJN5f3q62JCWE
 
+
+
 #### get user profile
 GET {{urlDev}}/user/profile
 Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiI2MzM0MjQxMTIxMDhkOGI2ZjU4MjJkMWQiLCJpYXQiOjE2NjQ3OTI3ODgsImV4cCI6MTY2NDgwMjg2OH0.BXOCvZR-N-pe3PWzBol0umjp9TqjSOqS3LoFWcv_dRE
+
+
+
 ### get new access token
 POST {{urlDev}}/user/refresh-token
 Content-Type: application/json
@@ -47,9 +53,16 @@ Content-Type: application/json
 GET {{urlDev}}/user/get-lists
 Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiI2MzQ3ZWViMTBhOGJkZGEyNjQxNWVlNjYiLCJpYXQiOjE2NjY3NjQ1MTIsImV4cCI6MTY2Njc3NDU5Mn0.1SfVJgFwfgZbVtknqQcQ8KMCVegThynvCaFVA2pf6_c
 
+
 ### get conversation for current user
 GET {{urlDev}}/conversation/get-lists
 Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiI2MzQ3ZWViMTBhOGJkZGEyNjQxNWVlNjYiLCJpYXQiOjE2NjY3Nzc1MDAsImV4cCI6MTY2Njc4NzU4MH0.yqS4Bn5TOZX7Z0yMymJ7kv8QVU951TEJ_fxyCj0Y4e4
+
+
+### add newMessageCount field
+GET {{urlDev}}/conversation/addNewMessageCountField
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiI2MzQ3ZWVlMDBhOGJkZGEyNjQxNWVlNmIiLCJpYXQiOjE2NjkwMjM0MDIsImV4cCI6MTY2OTAzMzQ4Mn0.ng00JJZtqMaJ45voob5kdfmvvOwAqdm2E74n729VzRY
+
 
 #### get contact list
 GET {{urlDev}}/user-contact/get-lists

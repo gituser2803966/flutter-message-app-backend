@@ -15,6 +15,7 @@ const createError = require("http-errors");
 const userRouter = require("./src/routes/user.router");
 const userContactRouter = require("./src/routes/user_contact.route");
 const conversationRouter = require("./src/routes/conversation.router");
+const messageNotificationRouter = require("./src/routes/message_notification.route");
 
 const io = new Server(server, {
   cors: {
@@ -30,6 +31,7 @@ app.use(express.json());
 app.use("/v1/user", userRouter);
 app.use("/v1/conversation", conversationRouter);
 app.use("/v1/user-contact", userContactRouter);
+app.use("/v1/notification", messageNotificationRouter);
 
 //when user type a route doesn't exist
 //it show error

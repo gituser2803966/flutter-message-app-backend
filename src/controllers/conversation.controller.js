@@ -2,23 +2,41 @@ const ConversationModel = require("../models/conversation.model");
 const ParticipantModel = require("../models/participant.model");
 const messageController = require("../controllers/message.controller");
 
+//add newMessageCount field
+const addNewMessageCountField = async (req, res) => {
+  try {
+    await ConversationModel.updateMany({}, { $set: { newMessageCount: 0 } });
+    return res.status(200).json({
+      result: true,
+      message: "add New Message Count Field OK!",
+    });
+  } catch (err) {
+    console.log(`::::::: addNewMessageCountField error: ${err}`);
+  }
+};
+
 const createAndResponseConversation = async (conversation) => {
-  const newConversation = new ConversationModel(conversation);
-  const conversationDoc = await newConversation.save(conversation);
-  return conversationDoc;
+  try {
+    const newConversation = new ConversationModel(conversation);
+    const conversationDoc = await newConversation.save(conversation);
+    return conversationDoc;
+  } catch (err) {
+    console.log(`::::::: createAndResponseConversation error: ${err}`);
+  }
 };
 
 const isConversationExist = async (conversationId) => {
-  console.log(`conversationId ${conversationId}`);
-  const existConversation = await ConversationModel.findOne({
-    localId: `${conversationId}`,
-  });
+  try {
+    const existConversation = await ConversationModel.findOne({
+      localId: `${conversationId}`,
+    });
 
-  console.log(`::::::::::: existConversation ${existConversation}`);
+    if (existConversation) return existConversation;
 
-  if (existConversation) return existConversation;
-
-  return null;
+    return null;
+  } catch (err) {
+    console.log(`::::::: isConversationExist error: ${err}`);
+  }
 };
 
 // @desc     get conversation list for userId
@@ -88,4 +106,5 @@ module.exports = {
   createAndResponseConversation,
   getConversationList,
   isConversationExist,
+  addNewMessageCountField,
 };

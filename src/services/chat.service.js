@@ -70,6 +70,22 @@ class SocketService {
       }
     );
 
+    //** ***  notify when user start typing  ** */
+    socket.on("on-user-start-typing", ({ recipients, conversationId }) => {
+      recipients.forEach((recipient) => {
+        _io.to(recipient).emit("on-user-start-typing", {
+          conversationId: conversationId,
+        });
+      });
+    });
+
+    //** ***  notify when user end typing  ** */
+    socket.on("on-user-end-typing", ({ recipients }) => {
+      recipients.forEach((recipient) => {
+        _io.to(recipient).emit("on-user-end-typing");
+      });
+    });
+
     //********** One-to-One chat **********
     ///add events here......
     socket.on(
