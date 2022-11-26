@@ -2,6 +2,7 @@ const conversationController = require("../controllers/conversation.controller")
 const participantController = require("../controllers/participant.controller");
 const messageController = require("../controllers/message.controller");
 const contactControler = require("../controllers/contact.controller");
+const messageNotificationController = require("../controllers/message_notification.controller");
 
 class SocketService {
   connection(socket) {
@@ -27,7 +28,7 @@ class SocketService {
         console.log(`:::: creator ${creator} `);
         console.log(`:::: channelId ${channelId} `);
 
-        //we need to add create to the list of recipients or participants
+        //we need to add creator to the list of recipients or participants
         const newRecipients = [creator];
         participants.forEach((p) => {
           newRecipients.push(p);
@@ -57,6 +58,7 @@ class SocketService {
           channelId: channelId,
           creator: conversation.creator,
           message: [],
+          unreadMessageNotification: [],
           createdAt: conversation.createdAt,
           deletedAt: conversation.deletedAt,
           updatedAt: conversation.updatedAt,
@@ -70,7 +72,7 @@ class SocketService {
       }
     );
 
-    //** ***  notify when user start typing  ** */
+    //****  notify when user start typing  ****/
     socket.on("on-user-start-typing", ({ recipients, conversationId }) => {
       recipients.forEach((recipient) => {
         _io.to(recipient).emit("on-user-start-typing", {
@@ -79,7 +81,7 @@ class SocketService {
       });
     });
 
-    //** ***  notify when user end typing  ** */
+    //****  notify when user end typing  ****/
     socket.on("on-user-end-typing", ({ recipients }) => {
       recipients.forEach((recipient) => {
         _io.to(recipient).emit("on-user-end-typing");
@@ -87,7 +89,6 @@ class SocketService {
     });
 
     //********** One-to-One chat **********
-    ///add events here......
     socket.on(
       "send-message",
       async ({
@@ -145,6 +146,12 @@ class SocketService {
             contact: contactForRecipient,
           });
 
+          const initUnreadMessage =
+            await messageNotificationController.initUnreadNewMessageForRecipient(
+              recipient,
+              conversation._id
+            );
+
           //conversation schema for client format.
           const conversationClientFormat = {
             _id: conversation._id,
@@ -154,18 +161,20 @@ class SocketService {
             channelId: channelId,
             creator: conversation.creator,
             message: [message],
+            //unread message notification
+            unreadMessageNotification: [initUnreadMessage],
             createdAt: conversation.createdAt,
             deletedAt: conversation.deletedAt,
             updatedAt: conversation.updatedAt,
           };
           //respone conversation schema for client format.
-          recipients.forEach((recipient) => {
+          recipients.forEach(async (recipient) => {
             _io.to(recipient).emit("create-conversation", {
               conversation: conversationClientFormat,
             });
           });
         } else {
-          //add a message to an existing chat
+          //***** add a message to an existing chat *****\\
           console.log("::::::add a message to an existing chat");
           const newMessage = await messageController.addAndResponeMessage({
             conversation: isExistConversation._id,
@@ -174,12 +183,23 @@ class SocketService {
             messageText: text,
             deletedAt: new Date("1900-01-10T00:00:00Z"),
           });
-          //send message to  all recipient
-          recipients.forEach((recipient) => {
-            console.log(`::::::::send to ${recipient}`);
+          //send message to all recipient (include sender)
+          recipients.forEach(async (recipient) => {
+            console.log(`::::::::send message to ${recipient}`);
             _io.to(recipient).emit("receive-message", {
               message: newMessage,
             });
+
+            if (recipient !== senderId) {
+              const updateUnreadMessage =
+                await messageNotificationController.updateOrCreateUnreadNewMessageForRecipient(
+                  recipient,
+                  isExistConversation._id
+                );
+              _io.to(recipient).emit("update-unread-message", {
+                unreadMessageNotification: updateUnreadMessage,
+              });
+            }
           });
         }
       }

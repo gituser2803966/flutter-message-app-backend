@@ -1,19 +1,7 @@
 const ConversationModel = require("../models/conversation.model");
 const ParticipantModel = require("../models/participant.model");
 const messageController = require("../controllers/message.controller");
-
-//add newMessageCount field
-const addNewMessageCountField = async (req, res) => {
-  try {
-    await ConversationModel.updateMany({}, { $set: { newMessageCount: 0 } });
-    return res.status(200).json({
-      result: true,
-      message: "add New Message Count Field OK!",
-    });
-  } catch (err) {
-    console.log(`::::::: addNewMessageCountField error: ${err}`);
-  }
-};
+const messageNotificationController = require("../controllers/message_notification.controller");
 
 const createAndResponseConversation = async (conversation) => {
   try {
@@ -53,12 +41,19 @@ const getConversationList = async (req, res) => {
     });
 
     for (const participant of participants) {
-      const [conversation, messages] = await Promise.all([
-        ConversationModel.find({
-          _id: participant.conversation,
-        }),
-        messageController.getMessagesForConversation(participant.conversation),
-      ]);
+      const [conversation, messages, unreadMessagenotifications] =
+        await Promise.all([
+          ConversationModel.find({
+            _id: participant.conversation,
+          }),
+          messageController.getMessagesForConversation(
+            participant.conversation
+          ),
+          messageNotificationController.getUnreadMessageCountNotification(
+            userId,
+            participant.conversation
+          ),
+        ]);
 
       const conversationObject = {
         _id: conversation[0]._id,
@@ -69,6 +64,7 @@ const getConversationList = async (req, res) => {
         channelId: conversation[0].channelId,
         creator: conversation[0].creator,
         messages: messages,
+        unreadMessageNotification: unreadMessagenotifications ?? [],
         createdAt: conversation[0].createdAt,
         deletedAt: conversation[0].deletedAt,
         updatedAt: conversation[0].updatedAt,
@@ -102,9 +98,43 @@ const getConversationList = async (req, res) => {
   }
 };
 
+const resetUnreadMessageCount = async (req, res) => {
+  try {
+    const { userId } = req.payload;
+    const { conversationId } = req.body;
+    const resetUnreadMessageCount =
+      await messageNotificationController.resetUnreadMessageCount(
+        userId,
+        conversationId
+      );
+    return res.status(200).json({
+      resetUnreadMessageCount,
+      message: "reset Unread Message Count OK!",
+      success: true,
+    });
+  } catch (err) {
+    if (err.name === "JsonWebTokenError") {
+      return res.status(500).json({
+        error: err.message,
+        message: "JsonWebTokenError!",
+      });
+    }
+    if (err.name === "TokenExpiredError") {
+      return res.status(500).json({
+        error: err.message,
+        message: "jwt expired!",
+      });
+    }
+    return res.status(500).json({
+      error: err,
+      message: "reset unread message count failed!!!.",
+    });
+  }
+};
+
 module.exports = {
   createAndResponseConversation,
   getConversationList,
   isConversationExist,
-  addNewMessageCountField,
+  resetUnreadMessageCount,
 };

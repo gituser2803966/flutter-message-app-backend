@@ -3,10 +3,10 @@ const conversationController = require("../controllers/conversation.controller")
 const isAuth = require("../middlewares/auth");
 
 router.get("/get-lists", isAuth, conversationController.getConversationList);
-router.get(
-  "/addNewMessageCountField",
+router.post(
+  "/reset-unread-message-count",
   isAuth,
-  conversationController.addNewMessageCountField
+  conversationController.resetUnreadMessageCount
 );
 
 module.exports = router;

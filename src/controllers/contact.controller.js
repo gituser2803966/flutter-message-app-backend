@@ -27,8 +27,6 @@ const addContactForSender = async (senderId, recipientId) => {
       contact: r_contact_doc._id,
     });
     const contactOfRecipient = await recipientUserContactModel.save();
-    console.log(`:::contactOfRecipient ${contactOfRecipient}`);
-
     //
     const contactOfSenderForClientFormat = {
       _id: contactOfRecipient._id,
@@ -67,15 +65,13 @@ const addContactForRecipient = async (senderId, recipientId) => {
       contact: s_contact_doc._id,
     });
     const contactOfSender = await senderUserContactModel.save();
-    console.log(`:::contactOfSender ${contactOfSender}`);
-
     //
     const contactOfRecipientForClientFormat = {
-      _id: senderUserContactModel._id,
-      user: senderUserContactModel.user,
+      _id: contactOfSender._id,
+      user: contactOfSender.user,
       contact: s_contact_doc,
-      createdAt: senderUserContactModel.createdAt,
-      updatedAt: senderUserContactModel.updatedAt,
+      createdAt: contactOfSender.createdAt,
+      updatedAt: contactOfSender.updatedAt,
     };
 
     return contactOfRecipientForClientFormat;

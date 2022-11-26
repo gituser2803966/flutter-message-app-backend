@@ -18,4 +18,4 @@ const messageNotificationSchema = new Schema(
   { timestamps: true }
 );
 
-module.exports = model("messageNotifications", messageNotificationSchema);
+module.exports = model("notifications", messageNotificationSchema);

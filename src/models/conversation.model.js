@@ -18,10 +18,6 @@ const conversationSchema = new Schema(
       type: String,
       required: true,
     },
-    newMessageCount: {
-      type: Number,
-      default: 0,
-    },
     //default date
     deletedAt: {
       type: Date,
