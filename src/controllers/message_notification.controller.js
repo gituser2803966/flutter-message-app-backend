@@ -12,19 +12,17 @@ const addNewMessageNotification = async (messageNotication) => {
 
 const resetUnreadMessageCount = async (userId, conversationId) => {
   try {
-    const unreadMessageNotification = await MessageNotiModel.findOneAndUpdate(
-      {
-        user: userId,
-        conversation: conversationId,
-      },
-      { newMessageCount: 0 }
-    );
+    const unreadMessageNotiDoc = await MessageNotiModel.findOne({
+      user: userId,
+      conversation: conversationId,
+    });
 
-    return unreadMessageNotification;
+    unreadMessageNotiDoc.newMessageCount = 0;
+
+    const newUnreadMessageNotiDoc = await unreadMessageNotiDoc.save();
+    return newUnreadMessageNotiDoc;
   } catch (err) {
-    console.log(
-      `::::: resetUnreadNewMessageCount ${resetUnreadNewMessageCount}`
-    );
+    console.log(`::::: resetUnreadNewMessageCount error ${err}`);
   }
 };
 
@@ -58,13 +56,18 @@ const updateOrCreateUnreadNewMessageForSender = async (
 };
 
 const initUnreadNewMessageForRecipient = async (recipient, conversationId) => {
-  const initUnreadMessageModelForRecipient = new MessageNotiModel({
-    user: recipient,
-    conversation: conversationId,
-    newMessageCount: 1,
-  });
-  const initUnreadMessageDoc = await initUnreadMessageModelForRecipient.save();
-  return initUnreadMessageDoc;
+  try {
+    const initUnreadMessageModelForRecipient = new MessageNotiModel({
+      user: recipient,
+      conversation: conversationId,
+      newMessageCount: 1,
+    });
+    const initUnreadMessageDoc =
+      await initUnreadMessageModelForRecipient.save();
+    return initUnreadMessageDoc;
+  } catch (err) {
+    console.log(`:::::: initUnreadNewMessageForRecipient error ${err}`);
+  }
 };
 
 const updateOrCreateUnreadNewMessageForRecipient = async (

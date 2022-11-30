@@ -64,7 +64,7 @@ class SocketService {
           updatedAt: conversation.updatedAt,
         };
         //respone conversation schema for client format.
-        newRecipients.forEach((recipient) => {
+        newRecipients.forEach(async (recipient) => {
           _io.to(recipient).emit("create-conversation", {
             conversation: conversationClientFormat,
           });
@@ -162,7 +162,7 @@ class SocketService {
             creator: conversation.creator,
             message: [message],
             //unread message notification
-            unreadMessageNotification: [initUnreadMessage],
+            unreadMessageNotification: [],
             createdAt: conversation.createdAt,
             deletedAt: conversation.deletedAt,
             updatedAt: conversation.updatedAt,
@@ -172,6 +172,11 @@ class SocketService {
             _io.to(recipient).emit("create-conversation", {
               conversation: conversationClientFormat,
             });
+            if (recipient !== senderId) {
+              _io.to(recipient).emit("update-unread-message", {
+                unreadMessageNotification: initUnreadMessage,
+              });
+            }
           });
         } else {
           //***** add a message to an existing chat *****\\

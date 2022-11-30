@@ -102,13 +102,21 @@ const resetUnreadMessageCount = async (req, res) => {
   try {
     const { userId } = req.payload;
     const { conversationId } = req.body;
-    const resetUnreadMessageCount =
+
+    console.log(`::::: conversationId ${conversationId}`);
+    console.log(`::::: userId ${userId}`);
+
+    const resetUnreadMessageNotification =
       await messageNotificationController.resetUnreadMessageCount(
         userId,
         conversationId
       );
+
+    console.log(
+      `::::::::resetUnreadMessageNotification ${resetUnreadMessageNotification}`
+    );
     return res.status(200).json({
-      resetUnreadMessageCount,
+      data: resetUnreadMessageNotification,
       message: "reset Unread Message Count OK!",
       success: true,
     });
