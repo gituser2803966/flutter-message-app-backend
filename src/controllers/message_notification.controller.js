@@ -37,11 +37,6 @@ const updateOrCreateUnreadNewMessageForSender = async (
     });
 
   if (updateUnreadMessageNotificationModelForSender) {
-    console.log("::::::::updateOrCreateUnreadNewMessageForSender");
-    console.log(
-      `::::::::updateUnreadMessageNotificationModelForSender ${updateUnreadMessageNotificationModelForSender}`
-    );
-
     return updateUnreadMessageNotificationModelForSender;
   } else {
     console.log("::::::::SSSSSSSS 2");
@@ -81,24 +76,18 @@ const updateOrCreateUnreadNewMessageForRecipient = async (
     });
 
   if (updateUnreadMessageNotificationModelForRecipient) {
-    console.log("::::::::RRRRRRR 1");
     updateUnreadMessageNotificationModelForRecipient.newMessageCount =
       updateUnreadMessageNotificationModelForRecipient.newMessageCount + 1;
     const updateUnreadMessageDocForRecipient =
       await updateUnreadMessageNotificationModelForRecipient.save();
-    console.log(
-      `::::::::updateUnreadMessageDocForRecipient ${updateUnreadMessageDocForRecipient}`
-    );
     return updateUnreadMessageDocForRecipient;
   } else {
-    console.log("::::::::RRRRRRR 2");
     const newUnreadMessageModelForRecipient = new MessageNotiModel({
       user: recipient,
       conversation: conversationId,
       newMessageCount: 1,
     });
     const newUnreadMessageDoc = await newUnreadMessageModelForRecipient.save();
-    console.log(`::::::::newUnreadMessageDoc ${newUnreadMessageDoc}`);
     return newUnreadMessageDoc;
   }
 };

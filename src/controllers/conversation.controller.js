@@ -1,5 +1,4 @@
 const ConversationModel = require("../models/conversation.model");
-const ParticipantModel = require("../models/participant.model");
 const messageController = require("../controllers/message.controller");
 const messageNotificationController = require("../controllers/message_notification.controller");
 
@@ -36,38 +35,33 @@ const getConversationList = async (req, res) => {
 
     const { userId } = req.payload;
 
-    const participants = await ParticipantModel.find({
-      users: `${userId}`,
-    });
+    const conversations = await ConversationModel.aggregate([
+      { $sort: { lastActiveTime: -1 } },
+      { $limit: 15 },
+    ]);
 
-    for (const participant of participants) {
-      const [conversation, messages, unreadMessagenotifications] =
-        await Promise.all([
-          ConversationModel.find({
-            _id: participant.conversation,
-          }),
-          messageController.getMessagesForConversation(
-            participant.conversation
-          ),
-          messageNotificationController.getUnreadMessageCountNotification(
-            userId,
-            participant.conversation
-          ),
-        ]);
+    for (const conversation of conversations) {
+      const [messages, unreadMessageNotifications] = await Promise.all([
+        messageController.getMessagesForConversation(conversation._id),
+        messageNotificationController.getUnreadMessageCountNotification(
+          userId,
+          conversation._id
+        ),
+      ]);
 
       const conversationObject = {
-        _id: conversation[0]._id,
-        localId: conversation[0].localId,
-        participants: participant.users,
-        title:
-          conversation[0].title !== "" ? conversation[0].title : "No title",
-        channelId: conversation[0].channelId,
-        creator: conversation[0].creator,
+        _id: conversation._id,
+        localId: conversation.localId,
+        title: conversation.title !== "" ? conversation.title : "No title",
+        channelId: conversation.channelId,
+        lastActiveTime: conversation.lastActiveTime,
+        creator: conversation.creator,
+        members: conversation.members,
         messages: messages,
-        unreadMessageNotification: unreadMessagenotifications ?? [],
-        createdAt: conversation[0].createdAt,
-        deletedAt: conversation[0].deletedAt,
-        updatedAt: conversation[0].updatedAt,
+        unreadMessageNotification: unreadMessageNotifications ?? [],
+        createdAt: conversation.createdAt,
+        deletedAt: conversation.deletedAt,
+        updatedAt: conversation.updatedAt,
       };
 
       conversationsClientFormat.push(conversationObject);
@@ -102,19 +96,12 @@ const resetUnreadMessageCount = async (req, res) => {
   try {
     const { userId } = req.payload;
     const { conversationId } = req.body;
-
-    console.log(`::::: conversationId ${conversationId}`);
-    console.log(`::::: userId ${userId}`);
-
     const resetUnreadMessageNotification =
       await messageNotificationController.resetUnreadMessageCount(
         userId,
         conversationId
       );
 
-    console.log(
-      `::::::::resetUnreadMessageNotification ${resetUnreadMessageNotification}`
-    );
     return res.status(200).json({
       data: resetUnreadMessageNotification,
       message: "reset Unread Message Count OK!",
@@ -140,9 +127,28 @@ const resetUnreadMessageCount = async (req, res) => {
   }
 };
 
+const updateLastActiveTime = async (conversationId) => {
+  try {
+    const conversationDoc = await ConversationModel.findByIdAndUpdate(
+      conversationId,
+      {
+        lastActiveTime: Date.now(),
+      },
+      { new: true }
+    );
+    console.log(
+      `:::: update Last Active Time conversation Doc ${conversationDoc} `
+    );
+    return conversationDoc;
+  } catch (err) {
+    console.log(`::::: updateLastActiveTime is error : ${err}`);
+  }
+};
+
 module.exports = {
   createAndResponseConversation,
   getConversationList,
   isConversationExist,
   resetUnreadMessageCount,
+  updateLastActiveTime,
 };

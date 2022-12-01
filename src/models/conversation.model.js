@@ -14,9 +14,18 @@ const conversationSchema = new Schema(
       type: Schema.Types.ObjectId,
       ref: "users",
     },
+    members: {
+      type: [String],
+      index: true,
+      required: true,
+    },
     channelId: {
       type: String,
       required: true,
+    },
+    lastActiveTime: {
+      type: Date,
+      default: Date.now(),
     },
     //default date
     deletedAt: {

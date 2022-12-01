@@ -1,5 +1,4 @@
 const conversationController = require("../controllers/conversation.controller");
-const participantController = require("../controllers/participant.controller");
 const messageController = require("../controllers/message.controller");
 const contactControler = require("../controllers/contact.controller");
 const messageNotificationController = require("../controllers/message_notification.controller");
@@ -16,22 +15,16 @@ class SocketService {
     //********** group chat **********
     socket.on(
       "create-conversation",
-      async ({
-        title,
-        creator,
-        channelId,
-        participants,
-        localConversationId,
-      }) => {
+      async ({ title, creator, channelId, members, localConversationId }) => {
         console.log(`:::: client tao cuoc tro chuyen moi `);
         console.log(`:::: title ${title} `);
         console.log(`:::: creator ${creator} `);
         console.log(`:::: channelId ${channelId} `);
 
         //we need to add creator to the list of recipients or participants
-        const newRecipients = [creator];
-        participants.forEach((p) => {
-          newRecipients.push(p);
+        const newMembers = [creator];
+        members.forEach((p) => {
+          newMembers.push(p);
         });
 
         const conversation =
@@ -39,24 +32,20 @@ class SocketService {
             localId: localConversationId,
             title: title,
             creator: creator,
+            members: newMembers,
             channelId: channelId,
             deletedAt: new Date("1900-01-10T00:00:00Z"),
-          });
-
-        const participant =
-          await participantController.createAndResponseParticipant({
-            conversation: conversation._id,
-            users: newRecipients,
           });
 
         //conversation schema for client format.
         const conversationClientFormat = {
           _id: conversation._id,
           localId: conversation.localId,
-          participants: participant.users,
           title: title,
           channelId: channelId,
+          lastActiveTime: conversation.lastActiveTime,
           creator: conversation.creator,
+          members: conversation.members,
           message: [],
           unreadMessageNotification: [],
           createdAt: conversation.createdAt,
@@ -64,8 +53,8 @@ class SocketService {
           updatedAt: conversation.updatedAt,
         };
         //respone conversation schema for client format.
-        newRecipients.forEach(async (recipient) => {
-          _io.to(recipient).emit("create-conversation", {
+        newMembers.forEach(async (member) => {
+          _io.to(member).emit("create-conversation", {
             conversation: conversationClientFormat,
           });
         });
@@ -73,34 +62,28 @@ class SocketService {
     );
 
     //****  notify when user start typing  ****/
-    socket.on("on-user-start-typing", ({ recipients, conversationId }) => {
-      recipients.forEach((recipient) => {
-        _io.to(recipient).emit("on-user-start-typing", {
+    socket.on("on-user-start-typing", ({ members, conversationId }) => {
+      members.forEach((member) => {
+        _io.to(member).emit("on-user-start-typing", {
           conversationId: conversationId,
         });
       });
     });
 
     //****  notify when user end typing  ****/
-    socket.on("on-user-end-typing", ({ recipients }) => {
-      recipients.forEach((recipient) => {
-        _io.to(recipient).emit("on-user-end-typing");
+    socket.on("on-user-end-typing", ({ members }) => {
+      members.forEach((member) => {
+        _io.to(member).emit("on-user-end-typing");
       });
     });
 
     //********** One-to-One chat **********
     socket.on(
       "send-message",
-      async ({
-        senderId,
-        recipients,
-        channelId,
-        text,
-        localConversationId,
-      }) => {
+      async ({ senderId, members, channelId, text, localConversationId }) => {
         console.log("::::::::: client send text message:", text);
         console.log("::::::::: senderId:", senderId);
-        console.log("::::::::: recipients:", recipients);
+        console.log("::::::::: members:", members);
 
         let isExistConversation =
           await conversationController.isConversationExist(
@@ -114,19 +97,17 @@ class SocketService {
               localId: localConversationId,
               title: "",
               creator: senderId,
+              members: members,
               channelId: channelId,
               deletedAt: new Date("1900-01-10T00:00:00Z"),
             });
 
-          const recipient = recipients.filter((r) => r !== senderId);
+          //remove senderId from members
+          const recipient = members.filter((r) => r !== senderId);
           //update conversation for new message above.
           // newMessage.conversation = conversation._id;
-          const [participant, message, contactForSender, contactForRecipient] =
+          const [message, contactForSender, contactForRecipient] =
             await Promise.all([
-              participantController.createAndResponseParticipant({
-                conversation: conversation._id,
-                users: recipients,
-              }),
               messageController.addAndResponeMessage({
                 conversation: conversation._id,
                 sender: senderId,
@@ -156,10 +137,11 @@ class SocketService {
           const conversationClientFormat = {
             _id: conversation._id,
             localId: conversation.localId,
-            participants: participant.users,
             title: "No title",
             channelId: channelId,
+            lastActiveTime: conversation.lastActiveTime,
             creator: conversation.creator,
+            members: members,
             message: [message],
             //unread message notification
             unreadMessageNotification: [],
@@ -167,19 +149,27 @@ class SocketService {
             deletedAt: conversation.deletedAt,
             updatedAt: conversation.updatedAt,
           };
-          //respone conversation schema for client format.
-          recipients.forEach(async (recipient) => {
-            _io.to(recipient).emit("create-conversation", {
+          //send message to all (include sender)
+          members.forEach(async (member) => {
+            _io.to(member).emit("create-conversation", {
               conversation: conversationClientFormat,
             });
-            if (recipient !== senderId) {
-              _io.to(recipient).emit("update-unread-message", {
+            if (member !== senderId) {
+              _io.to(member).emit("update-unread-message", {
                 unreadMessageNotification: initUnreadMessage,
               });
             }
           });
         } else {
           //***** add a message to an existing chat *****\\
+          //
+          //
+          //update lastActiveTime to an existing conversation
+          const updatedLastActiveTimeConversationDoc =
+            await conversationController.updateLastActiveTime(
+              isExistConversation._id
+            );
+
           console.log("::::::add a message to an existing chat");
           const newMessage = await messageController.addAndResponeMessage({
             conversation: isExistConversation._id,
@@ -189,19 +179,26 @@ class SocketService {
             deletedAt: new Date("1900-01-10T00:00:00Z"),
           });
           //send message to all recipient (include sender)
-          recipients.forEach(async (recipient) => {
-            console.log(`::::::::send message to ${recipient}`);
-            _io.to(recipient).emit("receive-message", {
+          members.forEach(async (member) => {
+            console.log(`::::::::send message to ${member}`);
+            _io.to(member).emit("receive-message", {
               message: newMessage,
             });
 
-            if (recipient !== senderId) {
+            _io.to(member).emit("update-last-active-time", {
+              lastActiveTime:
+                updatedLastActiveTimeConversationDoc.lastActiveTime,
+              conversationId: updatedLastActiveTimeConversationDoc._id,
+            });
+
+            //don't update unread message for sender
+            if (member !== senderId) {
               const updateUnreadMessage =
                 await messageNotificationController.updateOrCreateUnreadNewMessageForRecipient(
-                  recipient,
+                  member,
                   isExistConversation._id
                 );
-              _io.to(recipient).emit("update-unread-message", {
+              _io.to(member).emit("update-unread-message", {
                 unreadMessageNotification: updateUnreadMessage,
               });
             }
