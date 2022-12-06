@@ -1,4 +1,5 @@
 const { Schema, model } = require("mongoose");
+const attachmentModel = require("./attachment.model");
 
 const messageSchema = new Schema(
   {
@@ -10,15 +11,19 @@ const messageSchema = new Schema(
       type: Schema.Types.ObjectId,
       ref: "users",
     },
-    messageType: {
+    text: {
       type: String,
-      enum: ["text", "file", "audio"],
-      default: "text",
+      default: "",
     },
-    messageText: {
-      type: String,
-      required: true,
-    },
+    attachments: [
+      {
+        type: Schema.Types.ObjectId,
+        ref: "attachments",
+      },
+    ],
+    // attachments: new Schema({
+
+    // }),
     deletedAt: {
       type: Date,
       default: new Date("1900-01-10T00:00:00Z"),
@@ -26,5 +31,14 @@ const messageSchema = new Schema(
   },
   { timestamps: true }
 );
+
+// messageSchema.options.toJSON = {
+//   transform(_zipRequestDocument, ret, _options) {
+//     // eslint-disable-line no-unused-vars
+//     if (!ret.attachment) {
+//       ret.attachments = [];
+//     }
+//   },
+// };
 
 module.exports = model("messages", messageSchema);

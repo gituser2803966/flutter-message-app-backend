@@ -2,7 +2,7 @@ const ConversationModel = require("../models/conversation.model");
 const messageController = require("../controllers/message.controller");
 const messageNotificationController = require("../controllers/message_notification.controller");
 
-const createAndResponseConversation = async (conversation) => {
+const createConversation = async (conversation) => {
   try {
     const newConversation = new ConversationModel(conversation);
     const conversationDoc = await newConversation.save(conversation);
@@ -36,13 +36,20 @@ const getConversationList = async (req, res) => {
     const { userId } = req.payload;
 
     const conversations = await ConversationModel.aggregate([
+      {
+        $match: {
+          members: `${userId}`,
+        },
+      },
       { $sort: { lastActiveTime: -1 } },
       { $limit: 15 },
     ]);
 
     for (const conversation of conversations) {
       const [messages, unreadMessageNotifications] = await Promise.all([
-        messageController.getMessagesForConversation(conversation._id),
+        messageController.getMessages({
+          conversationId: conversation._id,
+        }),
         messageNotificationController.getUnreadMessageCountNotification(
           userId,
           conversation._id
@@ -52,12 +59,12 @@ const getConversationList = async (req, res) => {
       const conversationObject = {
         _id: conversation._id,
         localId: conversation.localId,
-        title: conversation.title !== "" ? conversation.title : "No title",
+        title: conversation.title,
         channelId: conversation.channelId,
         lastActiveTime: conversation.lastActiveTime,
         creator: conversation.creator,
         members: conversation.members,
-        messages: messages,
+        messages: messages ?? [],
         unreadMessageNotification: unreadMessageNotifications ?? [],
         createdAt: conversation.createdAt,
         deletedAt: conversation.deletedAt,
@@ -146,7 +153,7 @@ const updateLastActiveTime = async (conversationId) => {
 };
 
 module.exports = {
-  createAndResponseConversation,
+  createConversation,
   getConversationList,
   isConversationExist,
   resetUnreadMessageCount,

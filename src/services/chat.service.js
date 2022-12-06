@@ -2,6 +2,7 @@ const conversationController = require("../controllers/conversation.controller")
 const messageController = require("../controllers/message.controller");
 const contactControler = require("../controllers/contact.controller");
 const messageNotificationController = require("../controllers/message_notification.controller");
+const attachmentController = require("../controllers/attachment.controller");
 
 class SocketService {
   connection(socket) {
@@ -12,7 +13,7 @@ class SocketService {
       console.log("user disconnected");
     });
 
-    //********** group chat **********
+    //********** Group chat **********
     socket.on(
       "create-conversation",
       async ({ title, creator, channelId, members, localConversationId }) => {
@@ -21,23 +22,22 @@ class SocketService {
         console.log(`:::: creator ${creator} `);
         console.log(`:::: channelId ${channelId} `);
 
-        //we need to add creator to the list of recipients or participants
+        // We need to add creator to the list of recipients or participants
         const newMembers = [creator];
         members.forEach((p) => {
           newMembers.push(p);
         });
 
-        const conversation =
-          await conversationController.createAndResponseConversation({
-            localId: localConversationId,
-            title: title,
-            creator: creator,
-            members: newMembers,
-            channelId: channelId,
-            deletedAt: new Date("1900-01-10T00:00:00Z"),
-          });
+        const conversation = await conversationController.createConversation({
+          localId: localConversationId,
+          title: title,
+          creator: creator,
+          members: newMembers,
+          channelId: channelId,
+          deletedAt: new Date("1900-01-10T00:00:00Z"),
+        });
 
-        //conversation schema for client format.
+        // Conversation schema for client format.
         const conversationClientFormat = {
           _id: conversation._id,
           localId: conversation.localId,
@@ -52,7 +52,7 @@ class SocketService {
           deletedAt: conversation.deletedAt,
           updatedAt: conversation.updatedAt,
         };
-        //respone conversation schema for client format.
+        // Respone conversation schema for client format.
         newMembers.forEach(async (member) => {
           _io.to(member).emit("create-conversation", {
             conversation: conversationClientFormat,
@@ -61,7 +61,7 @@ class SocketService {
       }
     );
 
-    //****  notify when user start typing  ****/
+    //****  Notify when user start typing  ****/
     socket.on("on-user-start-typing", ({ members, conversationId }) => {
       members.forEach((member) => {
         _io.to(member).emit("on-user-start-typing", {
@@ -70,17 +70,24 @@ class SocketService {
       });
     });
 
-    //****  notify when user end typing  ****/
+    //****  Notify when user end typing  ****/
     socket.on("on-user-end-typing", ({ members }) => {
       members.forEach((member) => {
         _io.to(member).emit("on-user-end-typing");
       });
     });
 
-    //********** One-to-One chat **********
+    //********** Chat One-to-One **********
     socket.on(
       "send-message",
-      async ({ senderId, members, channelId, text, localConversationId }) => {
+      async ({
+        senderId,
+        members,
+        channelId,
+        text,
+        localConversationId,
+        attachment = null,
+      }) => {
         console.log("::::::::: client send text message:", text);
         console.log("::::::::: senderId:", senderId);
         console.log("::::::::: members:", members);
@@ -92,32 +99,24 @@ class SocketService {
         if (isExistConversation == null) {
           console.log(":::::::::::::create new conversation.........");
 
-          const conversation =
-            await conversationController.createAndResponseConversation({
-              localId: localConversationId,
-              title: "",
-              creator: senderId,
-              members: members,
-              channelId: channelId,
-              deletedAt: new Date("1900-01-10T00:00:00Z"),
-            });
+          // Save conversation
+          const conversation = await conversationController.createConversation({
+            localId: localConversationId,
+            title: "empty",
+            creator: senderId,
+            members: members,
+            channelId: channelId,
+            deletedAt: new Date("1900-01-10T00:00:00Z"),
+          });
 
-          //remove senderId from members
+          // Filter senderId from members
           const recipient = members.filter((r) => r !== senderId);
-          //update conversation for new message above.
-          // newMessage.conversation = conversation._id;
-          const [message, contactForSender, contactForRecipient] =
-            await Promise.all([
-              messageController.addAndResponeMessage({
-                conversation: conversation._id,
-                sender: senderId,
-                messageType: "text",
-                messageText: text,
-                deletedAt: new Date("1900-01-10T00:00:00Z"),
-              }),
-              contactControler.addContactForSender(senderId, recipient),
-              contactControler.addContactForRecipient(senderId, recipient),
-            ]);
+          // Update conversation for new message above.
+          // NewMessage.conversation = conversation._id;
+          const [contactForSender, contactForRecipient] = await Promise.all([
+            contactControler.addContactForSender(senderId, recipient),
+            contactControler.addContactForRecipient(senderId, recipient),
+          ]);
 
           _io.to(senderId).emit("create-contact", {
             contact: contactForSender,
@@ -127,29 +126,43 @@ class SocketService {
             contact: contactForRecipient,
           });
 
+          // console.log(`:::::::::: attachment url: ${attachment.url}`);
+          // Save message
+          const message = attachment
+            ? await messageController.addMessageWithAttachment({
+                conversation: conversation._id,
+                sender: senderId,
+                attachment: attachment,
+              })
+            : await messageController.addMessage({
+                conversation: conversation._id,
+                sender: senderId,
+                text: text,
+              });
+          // Init unread message count
           const initUnreadMessage =
             await messageNotificationController.initUnreadNewMessageForRecipient(
               recipient,
               conversation._id
             );
 
-          //conversation schema for client format.
+          // Conversation schema for client format.
           const conversationClientFormat = {
             _id: conversation._id,
             localId: conversation.localId,
-            title: "No title",
-            channelId: channelId,
+            title: conversation.title,
+            channelId: conversation.channelId,
             lastActiveTime: conversation.lastActiveTime,
             creator: conversation.creator,
-            members: members,
+            members: conversation.members,
             message: [message],
-            //unread message notification
+            // Unread message notification
             unreadMessageNotification: [],
             createdAt: conversation.createdAt,
             deletedAt: conversation.deletedAt,
             updatedAt: conversation.updatedAt,
           };
-          //send message to all (include sender)
+          // Send message to all (include sender)
           members.forEach(async (member) => {
             _io.to(member).emit("create-conversation", {
               conversation: conversationClientFormat,
@@ -161,28 +174,33 @@ class SocketService {
             }
           });
         } else {
-          //***** add a message to an existing chat *****\\
+          console.log("::::::add a message to an existing chat");
+          //***** Add a message to an existing chat *****\\
           //
           //
-          //update lastActiveTime to an existing conversation
+          // Update lastActiveTime to an existing conversation
           const updatedLastActiveTimeConversationDoc =
             await conversationController.updateLastActiveTime(
               isExistConversation._id
             );
-
-          console.log("::::::add a message to an existing chat");
-          const newMessage = await messageController.addAndResponeMessage({
-            conversation: isExistConversation._id,
-            sender: senderId,
-            messageType: "text",
-            messageText: text,
-            deletedAt: new Date("1900-01-10T00:00:00Z"),
-          });
-          //send message to all recipient (include sender)
+          // Add message to to an existing conversation
+          const message =
+            attachment !== null
+              ? await messageController.addMessageWithAttachment({
+                  conversation: isExistConversation._id,
+                  sender: senderId,
+                  attachment: attachment,
+                })
+              : await messageController.addMessage({
+                  conversation: isExistConversation._id,
+                  sender: senderId,
+                  text: text,
+                });
+          // Send message to all recipient (include sender)
           members.forEach(async (member) => {
             console.log(`::::::::send message to ${member}`);
             _io.to(member).emit("receive-message", {
-              message: newMessage,
+              message: message,
             });
 
             _io.to(member).emit("update-last-active-time", {
@@ -191,7 +209,7 @@ class SocketService {
               conversationId: updatedLastActiveTimeConversationDoc._id,
             });
 
-            //don't update unread message for sender
+            // Don't update unread message for sender
             if (member !== senderId) {
               const updateUnreadMessage =
                 await messageNotificationController.updateOrCreateUnreadNewMessageForRecipient(
